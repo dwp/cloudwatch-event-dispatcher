@@ -38,6 +38,7 @@ jobs:
     - run:
         name: "Publish Release on GitHub"
         command: |
+          set -u
           set +o pipefail
           LATEST_VERSION=$(curl --silent "https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
           set -o pipefail
