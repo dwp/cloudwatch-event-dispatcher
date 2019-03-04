@@ -40,6 +40,14 @@ def get_parameters():
 
 
 def handler(event, context):
+    args = get_parameters()
+    try:
+        cloudwatch_event_dispatcher(event, args)
+    except KeyError as key_name:
+        logger.error(f'Key: {key_name} is required in payload')
+
+
+def cloudwatch_event_dispatcher(event, args):
     if 'AWS_PROFILE' in os.environ:
         boto3.setup_default_session(profile_name=args.aws_profile,
                                     region_name=args.aws_region)
@@ -79,15 +87,15 @@ def handler(event, context):
             'DataType': 'String'
         }
 
-    if send_sns_notification(event, message_attributes):
+    if send_sns_notification(event, message_attributes, args.sns_topic_arn):
         logger.info("Message successfully dispatched")
 
 
-def send_sns_notification(event, message_attributes):
+def send_sns_notification(event, message_attributes, sns_topic_arn):
 
     sns_client = boto3.client('sns')
     response = sns_client.publish(
-        TargetArn=args.sns_topic_arn,
+        TargetArn=sns_topic_arn,
         Message=json.dumps(event),
         MessageStructure='string',
         MessageAttributes=message_attributes
@@ -102,12 +110,8 @@ def send_sns_notification(event, message_attributes):
 
 if __name__ == "__main__":
     try:
-        args = get_parameters()
         json_content = json.loads(open('event.json', 'r').read())
-        try:
-            handler(json_content, None)
-        except KeyError as key_name:
-            logger.error(f'Key: {key_name} is required in payload')
+        handler(json_content, None)
     except Exception as e:
         logger.error("Unexpected error occurred")
         logger.error(e)
