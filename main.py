@@ -91,7 +91,7 @@ def cloudwatch_event_dispatcher(event, args):
             'DataType': 'String'
         }
         message_attributes['desiredStatus'] = {
-            'StringValue': event['detail']['containers'][0]['desiredStatus'],
+            'StringValue': event['detail']['desiredStatus'],
             'DataType': 'String'
         }
 
