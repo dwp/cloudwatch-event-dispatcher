@@ -82,8 +82,16 @@ def cloudwatch_event_dispatcher(event, args):
             'StringValue': event['detail']['clusterArn'],
             'DataType': 'String'
         }
+        message_attributes['clusterService'] = {
+            'StringValue': event['detail']['group'].replace('service:', ''),
+            'DataType': 'String'
+        }
         message_attributes['lastStatus'] = {
             'StringValue': event['detail']['containers'][0]['lastStatus'],
+            'DataType': 'String'
+        }
+        message_attributes['desiredStatus'] = {
+            'StringValue': event['detail']['containers'][0]['desiredStatus'],
             'DataType': 'String'
         }
 
