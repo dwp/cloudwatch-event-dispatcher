@@ -27,7 +27,7 @@ def get_parameters():
     _args = parser.parse_args()
 
     # Override arguments with environment variables where set
-    if 'AWS_PROFILE' in os.environ:
+    if 'AWS_PROFILE' in os.environ :
         _args.aws_profile = os.environ['AWS_PROFILE']
 
     if 'AWS_REGION' in os.environ:
