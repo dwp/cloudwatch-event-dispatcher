@@ -51,7 +51,7 @@ def handler(event, context):
 
 
 def cloudwatch_event_dispatcher(event, args):
-    if "AWS_PROFILE" in os.environ:
+    if args.aws_profile is not "default":
         boto3.setup_default_session(
             profile_name=args.aws_profile, region_name=args.aws_region
         )
