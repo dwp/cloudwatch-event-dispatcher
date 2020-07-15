@@ -43,7 +43,7 @@ def get_escaped_json_string(json_dict):
     """
     try:
         escaped_string = json.dumps(json.dumps(json_dict))
-    except:
+    except TypeError:
         escaped_string = json.dumps(json_dict)
 
     return escaped_string
