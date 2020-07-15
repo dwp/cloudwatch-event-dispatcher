@@ -1,20 +1,52 @@
-import sys
 import argparse
 import boto3
+import json
 import logging
 import os
-import json
+import socket
+import sys
 
-# Initialise logging
-logger = logging.getLogger(__name__)
-log_level = os.environ["LOG_LEVEL"] if "LOG_LEVEL" in os.environ else "ERROR"
-logger.setLevel(logging.getLevelName(log_level.upper()))
-logging.basicConfig(
-    stream=sys.stdout,
-    format="%(asctime)s %(levelname)s %(module)s "
-    "%(process)s[%(thread)s] %(message)s",
-)
-logger.info("Logging at {} level".format(log_level.upper()))
+
+def setup_logging(logger_level):
+    """Set the default logger with json output."""
+    the_logger = logging.getLogger()
+    for old_handler in the_logger.handlers:
+        the_logger.removeHandler(old_handler)
+
+    new_handler = logging.StreamHandler(sys.stdout)
+    hostname = socket.gethostname()
+
+    json_format = (
+        f'{{ "timestamp": "%(asctime)s", "log_level": "%(levelname)s", "message": "%(message)s", '
+        f'"environment": "{args.environment}", "application": "{args.application}", '
+        f'"module": "%(module)s", "process":"%(process)s", '
+        f'"thread": "[%(thread)s]", "host": "{hostname}" }}'
+    )
+
+    new_handler.setFormatter(logging.Formatter(json_format))
+    the_logger.addHandler(new_handler)
+    new_level = logging.getLevelName(logger_level)
+    the_logger.setLevel(new_level)
+
+    if the_logger.isEnabledFor(logging.DEBUG):
+        # Log everything from boto3
+        boto3.set_stream_logger()
+        the_logger.debug(f'Using boto3", "version": "{boto3.__version__}')
+
+    return the_logger
+
+
+def get_escaped_json_string(json_dict):
+    """Dump out the given json string with escaped quotes.
+    Args:
+        json_dict (Dict): Parsed json as a dictionary
+    """
+    try:
+        escaped_string = json.dumps(json.dumps(json_dict))
+    except:
+        escaped_string = json.dumps(json_dict)
+
+    return escaped_string
 
 
 def get_parameters():
@@ -26,6 +58,8 @@ def get_parameters():
     parser.add_argument("--aws-profile", default="default")
     parser.add_argument("--aws-region", default="eu-west-2")
     parser.add_argument("--sns-topic-arn", default="")
+    parser.add_argument("--environment", help="Environment value", default="NOT_SET")
+    parser.add_argument("--application", help="Application", default="NOT_SET")
 
     _args = parser.parse_args()
 
@@ -43,7 +77,8 @@ def get_parameters():
 
 
 def handler(event, context):
-    args = get_parameters()
+    dumped_event = get_escaped_json_string(event)
+    logger.info(f'SNS Event", "sns_event": {dumped_event}, "mode": "handler')
     try:
         cloudwatch_event_dispatcher(event, args)
     except KeyError as key_name:
@@ -92,7 +127,6 @@ def cloudwatch_event_dispatcher(event, args):
 
 
 def send_sns_notification(event, message_attributes, sns_topic_arn):
-
     sns_client = boto3.client("sns")
     response = sns_client.publish(
         TargetArn=sns_topic_arn,
@@ -106,6 +140,12 @@ def send_sns_notification(event, message_attributes, sns_topic_arn):
         return False
     logger.info(response)
     return True
+
+
+# Initialise logging
+log_level = os.environ["LOG_LEVEL"] if "LOG_LEVEL" in os.environ else "ERROR"
+args = get_parameters()
+logger = setup_logging(log_level)
 
 
 if __name__ == "__main__":
